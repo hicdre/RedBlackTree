@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <cassert>
 #include <functional>
+#include <iostream>
 
 class RedBlackTree
 {
@@ -33,10 +34,11 @@ public:
 
 	void insert(int n) {
 		root = insert(root, n);
+		root->red = false;
 	}
 
 	void clear() {
-		deleteNode(root);
+		_deleteNode(root);
 	}
 
 	bool contains(int n) {
@@ -51,17 +53,40 @@ public:
 		return upperNode(root, n);
 	}
 
+	void erase(int n) {
+		root = eraseNode(root, n);
+		if (root)
+			root->red = false;
+	}
+
 	bool verify() {
 		Node* n = first(root);
+		size_t pathLength = blackPathLength(n);
 		while (n)
 		{
 			Node* b = next(n);
 			if (b && b->key <= n->key) {
 				return false;
 			}
+
+			if (!verifyRedNode(n))
+				return false;
+
+			if (!verifyBlackPathLength(n, pathLength))
+				return false;
+
 			n = b;
 		}
 		return true;
+	}
+
+	void print() {
+		Node* n = first(root);
+		while (n)
+		{
+			std::cout << n->key << "," << std::endl;
+			n = next(n);
+		}
 	}
 
 private:
@@ -79,14 +104,16 @@ private:
 		if (result == 0)
 			tree->set(n);
 		else if (result > 0) {
-			tree->left = insert(tree->left, n);
-			tree->left->parent = tree;
+			setLeftTree(tree, insert(tree->left, n));
 		}
 		else {
-			tree->right = insert(tree->right, n);
-			tree->right->parent = tree;
+			setRightTree(tree, insert(tree->right, n));
 		}
 
+		return fixup(tree);
+	}
+
+	static Node* fixup(Node* tree) {
 		if (IsRed(tree->right))
 			tree = roateLeft(tree);
 
@@ -95,37 +122,30 @@ private:
 
 		if (IsRed(tree->left) && IsRed(tree->right))
 			flipColor(tree);
-
 		return tree;
 	}
 
 	static Node* roateLeft(Node* tree){
 		//左转
+		assert(IsRed(tree->right));
 		Node* newTree = tree->right;
 		newTree->parent = tree->parent;
-		tree->parent = newTree;
 
-		tree->right = newTree->left;
-		if (tree->right)
-			tree->right->parent = tree;
-		newTree->left = tree;
-
+		setRightTree(tree, newTree->left);
+		setLeftTree(newTree, tree);
 		newTree->red = tree->red;
 		tree->red = true;
-		assert(tree->parent != tree);
 		return newTree;
 	}
 
 	static Node* roateRight(Node* tree){
 		//右转
+		assert(IsRed(tree->left));
 		Node* newTree = tree->left;
 		newTree->parent = tree->parent;
-		tree->parent = newTree;
 
-		tree->left = newTree->right;
-		if (tree->left)
-			tree->left->parent = tree;
-		newTree->right = tree;
+		setLeftTree(tree, newTree->right);
+		setRightTree(newTree, tree);
 
 		newTree->red = tree->red;
 		tree->red = true;
@@ -139,11 +159,11 @@ private:
 		return tree;
 	}
 
-	static void deleteNode(Node* tree) {
+	static void _deleteNode(Node* tree) {
 		if (tree == NULL)
 			return;
-		deleteNode(tree->left);
-		deleteNode(tree->right);
+		_deleteNode(tree->left);
+		_deleteNode(tree->right);
 		delete tree;
 	}
 
@@ -249,6 +269,130 @@ private:
 			else
 				return next(tree);
 		}
+	}
+
+	//移除一个节点
+	static Node* eraseNode(Node* tree, int n)
+	{
+		int result = tree->compare(n);
+		if (result > 0)
+		{
+			if (!IsRed(tree->left) && !IsRed(tree->left->left))
+				tree = moveRedLeft(tree);
+			setLeftTree(tree, eraseNode(tree->left, n));
+		}
+		else
+		{
+			if (IsRed(tree->left))
+				tree = roateRight(tree);
+			if (result == 0 && (tree->right == NULL))
+				return NULL;
+			if (!IsRed(tree->right) && !IsRed(tree->right->left))
+				tree = moveRedRight(tree);
+			if (result == 0)
+			{
+				Node* firstNode = first(tree->right);
+				tree->key = firstNode->key;
+				setRightTree(tree, eraseFirstNode(tree->right));
+			}
+			else 
+				setRightTree(tree, eraseNode(tree->right, n));
+		}
+		return fixup(tree);
+	}
+
+	static Node* eraseLastNode(Node* tree)
+	{
+		if (IsRed(tree->left)) {
+			tree = roateRight(tree);
+			assert(tree->right);
+			assert(IsRed(tree->right));
+		}
+
+		if (tree->right == NULL) {
+			delete tree;
+			return NULL;
+		}
+
+		if (!IsRed(tree->right) && !IsRed(tree->right->left)) {
+			tree = moveRedRight(tree);
+		}
+
+		setRightTree(tree, eraseLastNode(tree->right));
+		return fixup(tree);
+	}
+
+	static Node* eraseFirstNode(Node* tree)
+	{
+		if (tree->left == NULL) {
+			delete tree;
+			return NULL;
+		}
+
+		if (!IsRed(tree->left) && !IsRed(tree->left->left)) {
+			tree = moveRedLeft(tree);
+		}
+
+		setLeftTree(tree, eraseFirstNode(tree->left));
+		return fixup(tree);
+	}
+
+	static Node* moveRedLeft(Node* tree)
+	{
+		flipColor(tree);
+		if (IsRed(tree->right->left)) {
+			setRightTree(tree, roateRight(tree->right));
+			tree = roateLeft(tree);
+			flipColor(tree);
+		}
+		return tree;
+	}
+
+	static Node* moveRedRight(Node* tree)
+	{
+		flipColor(tree);
+		if (IsRed(tree->left->left)) {
+			tree = roateRight(tree);
+			flipColor(tree);
+		}
+		return tree;
+	}
+
+	static void setLeftTree(Node* tree, Node* sub) {
+		tree->left = sub;
+		if (sub)
+			sub->parent = tree;
+	}
+
+	static void setRightTree(Node* tree, Node* sub) {
+		tree->right = sub;
+		if (sub)
+			sub->parent = tree;
+	}
+
+	//红结点左右儿子都是黑的
+	static bool verifyRedNode(Node* tree){
+		if (IsRed(tree))
+			return !IsRed(tree->left) && !IsRed(tree->right);
+		return true;
+	}
+
+	static bool verifyBlackPathLength(Node* tree, size_t length) {
+		if (tree->left || tree->right)
+			return true;
+
+		return blackPathLength(tree) == length;
+	}
+
+	static size_t blackPathLength(Node* tree) {
+		size_t pathLength = 0;;
+		while (tree)
+		{
+			if (!IsRed(tree))
+				++pathLength;
+			tree = tree->parent;
+		}
+		return pathLength;
 	}
 private:
 	Node* root;
