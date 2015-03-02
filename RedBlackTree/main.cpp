@@ -4,107 +4,214 @@
 #include "stdafx.h"
 #include <iostream>
 #include <set>
-#include <time.h>
 #include <vector>
+#include <algorithm>
+#include <random>
+#include <functional>
 #include "timehelp.h"
-#include "RedBlackTree.h"
+#include "llrb.h"
+
+template<class T>
+class llrb_set : public llrb < T, T >
+{
+public:
+	typedef llrb<T, T> BaseType;
+	void insert(const T& k) {
+		BaseType::insert(k, k);
+	}
+};
+
+void GenRandomSet(std::vector<int>& randomSet, size_t count)
+{
+	std::random_device rd;
+	for (unsigned i = 0; i < count; ++i)
+	{
+		randomSet.push_back(rd());
+	}
+}
+
+void GenRandomSetII(std::vector<int>& randomSet, size_t count)
+{
+	std::random_device rd;
+	std::set<int> tset;
+	while (tset.size() < count)
+	{
+		tset.insert(rd());
+	}
+	for (int i : tset)
+	{
+		randomSet.push_back(i);
+	}
+	std::random_shuffle(randomSet.begin(), randomSet.end());
+}
+
+
+class BenchData
+{
+public:
+	BenchData(size_t count) {
+		Build(count);
+	}
+
+	std::vector<int> insertSet;
+	std::vector<int> searchSet;
+	std::vector<int> eraseSet;
+private:
+	void Build(size_t count) {
+		GenRandomSet(insertSet, count);
+		searchSet = insertSet;
+		eraseSet = insertSet;
+		std::random_shuffle(insertSet.begin(), insertSet.end());
+		std::random_shuffle(searchSet.begin(), searchSet.end());
+		std::random_shuffle(eraseSet.begin(), eraseSet.end());
+	}
+};
+
+double BenchOnce(const std::function<void(void)>& benchFunction)
+{
+	start_time();
+
+	benchFunction();
+
+	return elapse_millseconds();
+}
+
+template<class TreeType>
+void BenchFunction_insert(TreeType* tree, BenchData* data)
+{
+	for (int i : data->insertSet)
+	{
+		tree->insert(i);
+	}
+}
+
+template<class TreeType>
+void BenchFunction_search(TreeType* tree, BenchData* data)
+{
+	for (int i : data->searchSet)
+	{
+		tree->find(i);
+	}
+}
+
+template<class TreeType>
+void BenchFunction_erase(TreeType* tree, BenchData* data)
+{
+	for (int i : data->eraseSet)
+	{
+		tree->erase(i);
+	}
+}
+
+template<class TreeType>
+void BenchCase(const char* caseName, BenchData* data)
+{
+	TreeType tree;
+	std::cout << "=========================" << std::endl;
+	std::cout << "Begin " << caseName << ":" << std::endl;
+	std::cout << caseName <<" insert : " 
+		<< BenchOnce(std::bind(BenchFunction_insert<TreeType>, &tree, data))
+		<< "ms" << std::endl;
+
+	std::cout << caseName << " search : "
+		<< BenchOnce(std::bind(BenchFunction_search<TreeType>, &tree, data))
+		<< "ms" << std::endl;
+
+	std::cout << caseName << " erase : "
+		<< BenchOnce(std::bind(BenchFunction_erase<TreeType>, &tree, data))
+		<< "ms" << std::endl;
+	std::cout << "End " << caseName << ":" << std::endl;
+	std::cout << "=========================" << std::endl;
+}
+
+void BenchAll()
+{
+	BenchData data(100000);
+
+	BenchCase<std::set<int>>("STL", &data);
+	BenchCase<llrb_set<int>>("LLRB", &data);
+}
+
+void VerifyAll()
+{
+	std::vector<int> data;
+	GenRandomSetII(data, 3000);
+	std::vector<int> fist_data;
+	std::vector<int> second_data;
+	std::vector<int> third_data;
+	for (unsigned i = 0; i < data.size(); ++i)
+	{
+		switch (i % 3)
+		{
+		case 0:
+			fist_data.push_back(data[i]);
+			break;
+		case 1:
+			second_data.push_back(data[i]);
+			break;
+		case 2:
+			third_data.push_back(data[i]);
+			break;
+		default:
+			break;
+		}
+	}
+
+	
+	llrb_set<int> tree;
+	//插入
+	for (unsigned i = 0; i < fist_data.size(); ++i)
+	{
+		tree.insert(fist_data[i]);
+		assert(tree.verify());
+	}
+	assert(tree.verify());
+	for (int i : second_data)
+	{
+		tree.insert(i);
+	}
+	assert(tree.verify());
+
+	//查找
+	std::random_shuffle(fist_data.begin(), fist_data.end());
+	std::random_shuffle(second_data.begin(), second_data.end());
+	for (int i : fist_data)
+	{
+		assert(tree.contains(i));
+	}
+	for (int i : second_data)
+	{
+		assert(tree.contains(i));
+	}
+	for (int i : third_data)
+	{
+		assert(!tree.contains(i));
+	}
+
+	//删除
+	std::random_shuffle(third_data.begin(), third_data.end());
+	for (int i : second_data)
+	{
+		tree.erase(i);
+		assert(!tree.contains(i));
+	}
+	assert(tree.verify());
+	for (int i : third_data)
+	{
+		tree.erase(i);
+		assert(!tree.contains(i));
+	}
+	for (int i : fist_data)
+	{
+		assert(tree.contains(i));
+	}
+}
 
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	unsigned randSeed = (unsigned)time(NULL);
-	unsigned numTest = 10;
-	{//stl算法
-		std::set<int> tree;
-		srand(randSeed);
-
-		start_time();
-		for (unsigned i = 0; i < numTest; ++i)
-		{
-			tree.insert(rand());
-		}
-		std::cout << "STL set Finished : " << elapse_millseconds() << "ms" << std::endl;
-
-		std::set<int>::iterator it = tree.begin();
-		++it;
-		tree.erase(it);
-	}
-	{//RedBlackTree算法
-		RedBlackTree tree;
-		srand(randSeed);
-
-		start_time();
-		for (unsigned i = 0; i < numTest; ++i)
-		{
-			int k = rand();
-			std::cout << k << std::endl;
-			tree.insert(k);
-		}
-		std::cout << "RedBlackTree Finished : " << elapse_millseconds() << "ms" << std::endl;
-		//bool success = tree.verify();
-		//std::cout << "RedBlackTree Verify : " << (success ? "success" : "failed") << std::endl;
-
-		while (true)
-		{
-			int testNum = rand();
-			bool contains = tree.contains(testNum);
-			if (contains)
-			{
-				std::cout << "RedBlackTree contains: " << testNum << std::endl;
-			}
-			else
-			{
-				{
-					RedBlackTree::Node* node = tree.notGreater(testNum);
-					std::cout << "RedBlackTree not Greater than " << testNum << " is ";
-					if (node)
-						std::cout << node->key << std::endl;
-					else
-						std::cout << "null" << std::endl;
-				}
-				{
-					RedBlackTree::Node* node = tree.notLess(testNum);
-					std::cout << "RedBlackTree not Less than " << testNum << " is ";
-					if (node)
-						std::cout << node->key << std::endl;
-					else
-						std::cout << "null" << std::endl;
-				}
-				break;
-			}
-			//assert(tree.verify());
-		}
-		
-		//tree.print();
-		{
-			std::vector<int> v{ 27269, 13489, 23205, 11215, 15860, 19079, 8180, 8619, 31807, 23629 };
-			RedBlackTree ntree;
-			for (int i : v)
-			{
-				ntree.insert(i);
-			}
-			assert(ntree.verify());
-			ntree.erase(23205);
-			assert(!ntree.contains(23205));
-		}
-
-		
-		size_t eraseCount = 10;
-		while (eraseCount)
-		{
-			int testNum = rand();
-			bool c = tree.contains(testNum);
-			if (c)
-			{
-				std::cout << "RedBlackTree erase: " << testNum << std::endl;
-				tree.erase(testNum);
-				bool b = tree.contains(testNum);
-				assert(b != c);
-				--eraseCount;
-				assert(tree.verify());
-			}
-		}
-	}
+	VerifyAll();
+	BenchAll();
 	return 0;
 }
 

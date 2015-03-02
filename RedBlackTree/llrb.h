@@ -1,39 +1,48 @@
 ﻿#pragma once
 #include <cassert>
-#include <functional>
 #include <iostream>
 
-class RedBlackTree
+template<class KeyType>
+struct KeyCompare
+{
+	int operator()(const KeyType& left, const KeyType& right) const
+	{	// apply operator< to operands
+		if (left < right)
+			return -1;
+		if (left == right)
+			return 0;
+		return 1;
+	}
+};
+
+template<class KeyType, class ValueType,
+class KeyCompareType = KeyCompare<KeyType>>
+class llrb
 {
 public:
 	struct Node
 	{
-		int key;
+		KeyType key;
+		ValueType value;
 		Node* left;
 		Node* right;
 		Node* parent;
 		bool red;
 
-		Node(int k)
-			: key(k), left(NULL), right(NULL), parent(NULL), red(true) {
-		}
-		int compare(int k) {
-			return key - k;
-		}
-		void set(int k) {
-			key = k;
+		Node(const KeyType& k, const ValueType& v)
+			: key(k), value(v), left(NULL), right(NULL), parent(NULL), red(true) {
 		}
 	};
 	
-	RedBlackTree() 
-		: root(NULL) {
+	llrb() 
+		: root(NULL), key_comp(KeyCompareType()) {
 	}
-	~RedBlackTree() {
+	~llrb() {
 		clear();
 	}
 
-	void insert(int n) {
-		root = insert(root, n);
+	void insert(const KeyType& k, const ValueType& v) {
+		root = insert(root, k, v);
 		root->red = false;
 	}
 
@@ -41,31 +50,39 @@ public:
 		_deleteNode(root);
 	}
 
-	bool contains(int n) {
+	bool contains(const KeyType& n) {
 		return find(root, n) != NULL;
 	}
 
-	Node* notGreater(int n) {
+	Node* find(const KeyType& n) {
+		return find(root, n);
+	}
+
+	Node* notGreater(const KeyType& n) {
 		return lowerNode(root, n);
 	}
 
-	Node* notLess(int n) {
+	Node* notLess(const KeyType& n) {
 		return upperNode(root, n);
 	}
 
-	void erase(int n) {
+	void erase(const KeyType& n) {
+		if (root == NULL)
+			return;
 		root = eraseNode(root, n);
 		if (root)
 			root->red = false;
 	}
 
 	bool verify() {
+		if (root == NULL)
+			return true;
 		Node* n = first(root);
 		size_t pathLength = blackPathLength(n);
 		while (n)
 		{
 			Node* b = next(n);
-			if (b && b->key <= n->key) {
+			if (b && compare(b->key, n->key) <= 0) {
 				return false;
 			}
 
@@ -90,44 +107,46 @@ public:
 	}
 
 private:
-	static bool IsRed(Node* tree) {
+	bool isRed(Node* tree) {
 		if (tree == NULL)
 			return false;
 		return tree->red;
 	}
 
-	static Node* insert(Node* tree, int n) {
+	Node* insert(Node* tree, const KeyType& k, const ValueType& v) {
 		if (tree == NULL)
-			return new Node(n);
+			return new Node(k, v);
 
-		int result = tree->compare(n);
-		if (result == 0)
-			tree->set(n);
-		else if (result > 0) {
-			setLeftTree(tree, insert(tree->left, n));
+		int result = compare(k, tree->key);
+		if (result == 0){//assignment
+			tree->key = k;
+			tree->value = v;
+		}
+		else if (result < 0) {
+			setLeftTree(tree, insert(tree->left, k, v));
 		}
 		else {
-			setRightTree(tree, insert(tree->right, n));
+			setRightTree(tree, insert(tree->right, k, v));
 		}
 
 		return fixup(tree);
 	}
 
-	static Node* fixup(Node* tree) {
-		if (IsRed(tree->right))
+	Node* fixup(Node* tree) {
+		if (isRed(tree->right))
 			tree = roateLeft(tree);
 
-		if (IsRed(tree->left) && IsRed(tree->left->left))
+		if (isRed(tree->left) && isRed(tree->left->left))
 			tree = roateRight(tree);
 
-		if (IsRed(tree->left) && IsRed(tree->right))
+		if (isRed(tree->left) && isRed(tree->right))
 			flipColor(tree);
 		return tree;
 	}
 
-	static Node* roateLeft(Node* tree){
+	Node* roateLeft(Node* tree){
 		//左转
-		assert(IsRed(tree->right));
+		assert(isRed(tree->right));
 		Node* newTree = tree->right;
 		newTree->parent = tree->parent;
 
@@ -138,9 +157,9 @@ private:
 		return newTree;
 	}
 
-	static Node* roateRight(Node* tree){
+	Node* roateRight(Node* tree){
 		//右转
-		assert(IsRed(tree->left));
+		assert(isRed(tree->left));
 		Node* newTree = tree->left;
 		newTree->parent = tree->parent;
 
@@ -152,14 +171,14 @@ private:
 		return newTree;
 	}
 
-	static Node* flipColor(Node* tree){
+	Node* flipColor(Node* tree){
 		tree->left->red = !tree->left->red;
 		tree->right->red = !tree->right->red;
 		tree->red = !tree->red;
 		return tree;
 	}
 
-	static void _deleteNode(Node* tree) {
+	void _deleteNode(Node* tree) {
 		if (tree == NULL)
 			return;
 		_deleteNode(tree->left);
@@ -167,7 +186,7 @@ private:
 		delete tree;
 	}
 
-	static Node* next(Node* tree)
+	Node* next(Node* tree)
 	{
 		if (tree == NULL)
 			return NULL;
@@ -177,7 +196,7 @@ private:
 			return leftAncestor(tree);
 	}
 
-	static Node* prev(Node* tree)
+	Node* prev(Node* tree)
 	{
 		if (tree == NULL)
 			return NULL;
@@ -187,7 +206,7 @@ private:
 			return rightAncestor(tree);
 	}
 
-	static Node* first(Node* tree)
+	Node* first(Node* tree)
 	{
 		assert(tree);
 		if (tree->left)
@@ -196,7 +215,7 @@ private:
 			return tree;
 	}
 
-	static Node* last(Node* tree)
+	Node* last(Node* tree)
 	{
 		assert(tree);
 		if (tree->right)
@@ -205,39 +224,39 @@ private:
 			return tree;
 	}
 
-	static Node* leftAncestor(Node* tree) {
+	Node* leftAncestor(Node* tree) {
 		while (tree->parent && tree->parent->left != tree) {
 			tree = tree->parent;
 		}
 		return tree->parent;
 	}
 
-	static Node* rightAncestor(Node* tree) {
+	Node* rightAncestor(Node* tree) {
 		while (tree->parent && tree->parent->right != tree) {
 			tree = tree->parent;
 		}
 		return tree->parent;
 	}
 
-	static Node* find(Node* tree, int n) {
+	Node* find(Node* tree, const KeyType& n) {
 		if (tree == NULL)
 			return NULL;
-		int result = tree->compare(n);
+		int result = compare(n, tree->key);
 		if (result == 0)
 			return tree;
-		else if (result > 0)
+		else if (result < 0)
 			return find(tree->left, n);
 		else
 			return find(tree->right, n);
 	}
 
-	static Node* lowerNode(Node* tree, int n) {
+	Node* lowerNode(Node* tree, const KeyType& n) {
 		if (tree == NULL)
 			return NULL;
-		int result = tree->compare(n);
+		int result = compare(n, tree->key);
 		if (result == 0)
 			return tree;
-		else if (result > 0) {
+		else if (result < 0) {
 			if (tree->left)
 				return lowerNode(tree->left, n);
 			else
@@ -251,13 +270,17 @@ private:
 		}
 	}
 
-	static Node* upperNode(Node* tree, int n) {
+	int compare(const KeyType& a, const KeyType& b) {
+		return key_comp(a, b);
+	}
+
+	Node* upperNode(Node* tree, const KeyType& n) {
 		if (tree == NULL)
 			return NULL;
-		int result = tree->compare(n);
+		int result = compare(n, tree->key);
 		if (result == 0)
 			return tree;
-		else if (result > 0) {
+		else if (result < 0) {
 			if (tree->left)
 				return upperNode(tree->left, n);
 			else
@@ -272,27 +295,32 @@ private:
 	}
 
 	//移除一个节点
-	static Node* eraseNode(Node* tree, int n)
+	Node* eraseNode(Node* tree, const KeyType& n)
 	{
-		int result = tree->compare(n);
-		if (result > 0)
+		//不存在
+		if (compare(n, tree->key) != 0 && tree->left == NULL && tree->right == NULL)
+			return tree;
+
+		if (compare(n, tree->key) < 0)
 		{
-			if (!IsRed(tree->left) && !IsRed(tree->left->left))
+			if (!isRed(tree->left) && !isRed(tree->left->left))
 				tree = moveRedLeft(tree);
 			setLeftTree(tree, eraseNode(tree->left, n));
 		}
 		else
 		{
-			if (IsRed(tree->left))
+			if (isRed(tree->left))
 				tree = roateRight(tree);
-			if (result == 0 && (tree->right == NULL))
+			if (compare(n, tree->key) == 0 && (tree->right == NULL))
 				return NULL;
-			if (!IsRed(tree->right) && !IsRed(tree->right->left))
+			if (!isRed(tree->right) && !isRed(tree->right->left))
 				tree = moveRedRight(tree);
-			if (result == 0)
+
+			//经过旋转后tree可能已经变化
+			if (compare(n, tree->key) == 0)
 			{
 				Node* firstNode = first(tree->right);
-				tree->key = firstNode->key;
+				tree->key = firstNode->key;//assignment
 				setRightTree(tree, eraseFirstNode(tree->right));
 			}
 			else 
@@ -301,12 +329,12 @@ private:
 		return fixup(tree);
 	}
 
-	static Node* eraseLastNode(Node* tree)
+	Node* eraseLastNode(Node* tree)
 	{
-		if (IsRed(tree->left)) {
+		if (isRed(tree->left)) {
 			tree = roateRight(tree);
 			assert(tree->right);
-			assert(IsRed(tree->right));
+			assert(isRed(tree->right));
 		}
 
 		if (tree->right == NULL) {
@@ -314,7 +342,7 @@ private:
 			return NULL;
 		}
 
-		if (!IsRed(tree->right) && !IsRed(tree->right->left)) {
+		if (!isRed(tree->right) && !isRed(tree->right->left)) {
 			tree = moveRedRight(tree);
 		}
 
@@ -322,14 +350,14 @@ private:
 		return fixup(tree);
 	}
 
-	static Node* eraseFirstNode(Node* tree)
+	Node* eraseFirstNode(Node* tree)
 	{
 		if (tree->left == NULL) {
 			delete tree;
 			return NULL;
 		}
 
-		if (!IsRed(tree->left) && !IsRed(tree->left->left)) {
+		if (!isRed(tree->left) && !isRed(tree->left->left)) {
 			tree = moveRedLeft(tree);
 		}
 
@@ -337,10 +365,10 @@ private:
 		return fixup(tree);
 	}
 
-	static Node* moveRedLeft(Node* tree)
+	Node* moveRedLeft(Node* tree)
 	{
 		flipColor(tree);
-		if (IsRed(tree->right->left)) {
+		if (isRed(tree->right->left)) {
 			setRightTree(tree, roateRight(tree->right));
 			tree = roateLeft(tree);
 			flipColor(tree);
@@ -348,47 +376,47 @@ private:
 		return tree;
 	}
 
-	static Node* moveRedRight(Node* tree)
+	Node* moveRedRight(Node* tree)
 	{
 		flipColor(tree);
-		if (IsRed(tree->left->left)) {
+		if (isRed(tree->left->left)) {
 			tree = roateRight(tree);
 			flipColor(tree);
 		}
 		return tree;
 	}
 
-	static void setLeftTree(Node* tree, Node* sub) {
+	void setLeftTree(Node* tree, Node* sub) {
 		tree->left = sub;
 		if (sub)
 			sub->parent = tree;
 	}
 
-	static void setRightTree(Node* tree, Node* sub) {
+	void setRightTree(Node* tree, Node* sub) {
 		tree->right = sub;
 		if (sub)
 			sub->parent = tree;
 	}
 
 	//红结点左右儿子都是黑的
-	static bool verifyRedNode(Node* tree){
-		if (IsRed(tree))
-			return !IsRed(tree->left) && !IsRed(tree->right);
+	bool verifyRedNode(Node* tree){
+		if (isRed(tree))
+			return !isRed(tree->left) && !isRed(tree->right);
 		return true;
 	}
 
-	static bool verifyBlackPathLength(Node* tree, size_t length) {
+	bool verifyBlackPathLength(Node* tree, size_t length) {
 		if (tree->left || tree->right)
 			return true;
 
 		return blackPathLength(tree) == length;
 	}
 
-	static size_t blackPathLength(Node* tree) {
+	size_t blackPathLength(Node* tree) {
 		size_t pathLength = 0;;
 		while (tree)
 		{
-			if (!IsRed(tree))
+			if (!isRed(tree))
 				++pathLength;
 			tree = tree->parent;
 		}
@@ -396,5 +424,6 @@ private:
 	}
 private:
 	Node* root;
+	KeyCompareType key_comp;
 
 };

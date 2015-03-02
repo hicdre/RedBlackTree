@@ -27,7 +27,7 @@
     <ClInclude Include="timehelp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RedBlackTree.h">
+    <ClInclude Include="llrb.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -39,9 +39,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="timehelp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RedBlackTree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
