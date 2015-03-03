@@ -30,6 +30,18 @@
     <ClInclude Include="llrb.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="another_rb.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bench.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="random_data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="second_redblacktree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -39,6 +51,27 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="timehelp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="random_data.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="bench_another_rb.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="bench_llrb.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="bench_nothing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="bench_stl_set.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="bench_stl_unordered_set.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="second_redblacktree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

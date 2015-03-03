@@ -85,17 +85,28 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="another_rb.h" />
+    <ClInclude Include="bench.h" />
     <ClInclude Include="llrb.h" />
+    <ClInclude Include="random_data.h" />
+    <ClInclude Include="second_redblacktree.h" />
     <ClInclude Include="timehelp.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="bench_another_rb.cpp" />
+    <ClCompile Include="second_redblacktree.cpp" />
+    <ClCompile Include="bench_stl_unordered_set.cpp" />
+    <ClCompile Include="bench_llrb.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="bench_nothing.cpp" />
+    <ClCompile Include="random_data.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="bench_stl_set.cpp" />
     <ClCompile Include="timehelp.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

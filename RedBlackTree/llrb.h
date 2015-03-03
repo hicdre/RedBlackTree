@@ -55,7 +55,8 @@ public:
 	}
 
 	Node* find(const KeyType& n) {
-		return find(root, n);
+		//return find(root, n);
+		return findNoRecursive(root, n);
 	}
 
 	Node* notGreater(const KeyType& n) {
@@ -248,6 +249,21 @@ private:
 			return find(tree->left, n);
 		else
 			return find(tree->right, n);
+	}
+
+	Node* findNoRecursive(Node* tree, const KeyType& n) {
+		Node* curr = tree;
+		while (curr)
+		{
+			int result = compare(n, tree->key);
+			if (result == 0)
+				return curr;
+			else if (result < 0)
+				curr = curr->left;
+			else
+				curr = curr->right;
+		}
+		return NULL;
 	}
 
 	Node* lowerNode(Node* tree, const KeyType& n) {
